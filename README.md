@@ -7,7 +7,7 @@ Convergence is a web application that consolidates bookmarks from various browse
 
 Also working on a extension based feature where users can directly search for these bookmarks - akin to Spotlight Search on MacOS.
 
-Currently supported browsers and services(tentative):
+(Tentative list of platforms/servies I want to integrate ):
 - Google Chrome
 - Mozilla Firefox
 - Microsoft Edge
