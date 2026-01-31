@@ -21,7 +21,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -78,8 +77,6 @@ public class PlatformConnection {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    @Version
-    private Long version;
 
     @PrePersist
     protected void onCreate() {
