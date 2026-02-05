@@ -22,7 +22,6 @@ public class BookmarkResponse {
     private String description;
     private PlatformType platform;
     private ContentType contentType;
-    private String author;
     private LocalDateTime createdAt;
     private LocalDateTime savedAt;
 }
