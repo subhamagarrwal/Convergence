@@ -1,0 +1,36 @@
+{
+    "manifest_version" : 3,
+    "name" : "convergence bookmark extension",
+    "version" : "1.0",
+    "description" : "A Chrome extension to manage bookmarks for the Convergence project.",
+    "permissions" : [
+        "bookmarks",
+        "storage",
+        "identity",
+        "tabs",
+        "webRequest"
+    ],
+    "host_permissions": [
+        "http://localhost:8080/*",
+        "https://localhost:8080/*"
+    ],
+    "browser_action": {
+        "default_icon": "icons/convergenceimage.png",
+        "default_title": "Bookmark it!"
+    },
+    "oauth2": {
+        "client_id":"631666548168-706nhn4jp1r3pcr531ueasrn1omk9oab.apps.googleusercontent.com",
+        "scopes": [
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "https://www.googleapis.com/auth/userinfo.email"
+        ]
+    },
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Sync Bookmarks"
+    },
+    "background" : {
+        "service_worker" : "background.js"
+    }
+
+}

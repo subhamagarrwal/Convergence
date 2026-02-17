@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder  // ← ADD THIS!
+@Builder  
 public class ApiResponse<T> {
     private boolean success;
     private String message;

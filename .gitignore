@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+###env file inside connvergence
+src/main/java/com/subham/convergence/.env 
+src/main/resources/application.yml

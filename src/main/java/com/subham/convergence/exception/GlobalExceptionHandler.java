@@ -11,10 +11,12 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
+import com.subham.convergence.dto.response.ApiResponse;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler{
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValidException
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException
     (MethodArgumentNotValidException ex,WebRequest request)
     {
         Map<String,Object> fieldErrors = new HashMap<>();

@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data  // ← ADD THIS!
+@Data  
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoginRequest {
