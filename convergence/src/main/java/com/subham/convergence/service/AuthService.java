@@ -22,16 +22,13 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        // Check if user already exists
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Email already registered");
         }
-        
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Username already taken");
         }
 
-        // Create new user
         User user = User.builder()
                 .email(request.getEmail())
                 .username(request.getUsername())
@@ -40,13 +37,13 @@ public class AuthService {
 
         userRepository.save(user);
 
-        // Generate JWT tokens
         String token = jwtService.generateToken(user.getEmail());
         String refreshToken = jwtService.generateRefreshToken(user.getEmail());
 
         return AuthResponse.builder()
                 .token(token)
                 .refreshToken(refreshToken)
+                .userId(user.getId().toString())  // ADD THIS
                 .email(user.getEmail())
                 .username(user.getUsername())
                 .message("Registration successful")
@@ -54,22 +51,20 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        // Find user by email
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
-        // Check password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidCredentialsException("Invalid email or password");
         }
 
-        // Generate tokens
         String token = jwtService.generateToken(user.getEmail());
         String refreshToken = jwtService.generateRefreshToken(user.getEmail());
 
         return AuthResponse.builder()
                 .token(token)
                 .refreshToken(refreshToken)
+                .userId(user.getId().toString())  // ADD THIS
                 .email(user.getEmail())
                 .username(user.getUsername())
                 .message("Login successful")

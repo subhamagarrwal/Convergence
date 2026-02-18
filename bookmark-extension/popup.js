@@ -11,14 +11,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ── Save ───────────────────────────────────────────────────
   $("saveBtn").addEventListener("click", async () => {
-    const uid = $("userId").value.trim();
     const jwt = $("jwtToken").value.trim();
-    if (!uid) return show("Enter your user ID", "err");
     if (!jwt) return show("Enter your JWT token", "err");
 
-    await chrome.storage.local.set({ userId: uid, jwtToken: jwt });
-    show("✅ Saved. Sync running automatically.", "ok");
-    refreshStatus();
+    // Extract userId from JWT payload automatically
+    try {
+      const payload = JSON.parse(atob(jwt.split('.')[1]));
+      const uid = payload.sub || payload.userId || payload.id;
+      if (!uid) return show("Could not extract userId from token", "err");
+      
+      await chrome.storage.local.set({ userId: uid, jwtToken: jwt });
+      $("userId").value = uid;
+      show("✅ Saved. Sync running automatically.", "ok");
+      refreshStatus();
+    } catch(e) {
+      show("❌ Invalid JWT token", "err");
+    }
   });
 
   // ── Sync buttons ───────────────────────────────────────────

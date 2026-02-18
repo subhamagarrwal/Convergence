@@ -33,23 +33,39 @@ public class YouTubeScraperService {
     private final ObjectMapper objectMapper;
 
     private static final String WATCH_LATER_URL = "https://www.youtube.com/playlist?list=WL";
+    
+    // Define standard User Agent to look like a real PC
+    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
     // ════════════════════════════════════════════════════════════
     // STEP 1: Open browser for user to login manually
-    //         Returns once session cookies are captured
     // ════════════════════════════════════════════════════════════
     public String openLoginBrowser(UUID userId) {
         log.info("[YouTube] Opening login browser for user {}", userId);
 
         try (Playwright playwright = Playwright.create()) {
             BrowserType chromium = playwright.chromium();
+            
+            // Stealth args
+            List<String> stealthArgs = List.of(
+                "--disable-blink-features=AutomationControlled", // hides automation flag
+                "--no-sandbox",
+                "--disable-infobars"
+            ); // <-- FIXED: Added semicolon
 
             // VISIBLE browser — user must see it to log in
             Browser browser = chromium.launch(new BrowserType.LaunchOptions()
                     .setHeadless(false)
-                    .setSlowMo(100));
+                    .setSlowMo(100)
+                    .setArgs(stealthArgs)
+                    .setIgnoreDefaultArgs(List.of("--enable-automation"))
+            );
 
-            BrowserContext context = browser.newContext();
+            BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                    .setViewportSize(1200, 800)
+                    .setUserAgent(USER_AGENT)
+            );    
+            
             Page page = context.newPage();
 
             // Go to YouTube login
@@ -57,9 +73,9 @@ public class YouTubeScraperService {
 
             log.info("[YouTube] Waiting for user to complete login...");
 
-            // Wait until user reaches YouTube homepage (max 3 min)
+            // Wait until user reaches YouTube homepage (max 5 min)
             page.waitForURL("https://www.youtube.com/**",
-                    new Page.WaitForURLOptions().setTimeout(180_000));
+                    new Page.WaitForURLOptions().setTimeout(300_000));
 
             log.info("[YouTube] Login detected — capturing cookies");
 
@@ -92,7 +108,6 @@ public class YouTubeScraperService {
 
     // ════════════════════════════════════════════════════════════
     // STEP 2: Scrape Watch Later using stored cookies
-    //         Runs silently in headless mode
     // ════════════════════════════════════════════════════════════
     @Transactional
     public YouTubeSyncResponse scrapeWatchLater(UUID userId) {
@@ -107,10 +122,23 @@ public class YouTubeScraperService {
         log.info("[YouTube] Scraping Watch Later for user {}", userId);
 
         try (Playwright playwright = Playwright.create()) {
-            Browser browser = playwright.chromium().launch(
-                    new BrowserType.LaunchOptions().setHeadless(true));
+            
+            // UPDATED: Must use stealth args here too!
+            List<String> stealthArgs = List.of(
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox"
+            );
 
-            BrowserContext context = browser.newContext();
+            Browser browser = playwright.chromium().launch(
+                    new BrowserType.LaunchOptions()
+                    .setHeadless(true)
+                    .setArgs(stealthArgs) // <-- Added stealth args
+            );
+
+            // UPDATED: Must use same User Agent
+            BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                    .setUserAgent(USER_AGENT)
+            );
 
             // Restore saved cookies
             List<Cookie> cookies = objectMapper.readValue(
