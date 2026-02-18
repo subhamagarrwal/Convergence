@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.2</version>
+        <version>3.4.3</version>
         <relativePath/>
     </parent>
     <groupId>com.subham</groupId>
@@ -91,6 +91,27 @@
             <version>1.44.0</version>
         </dependency>
 
+        <!-- YouTube specific services -->
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-youtube</artifactId>
+            <version>v3-rev20250422-2.0.0</version>
+        </dependency>
+
+        <!-- Core Google Client Library (Required for transport and auth) -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+
+        <!-- JSON processing (Required for JacksonFactory) -->
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client-jackson2</artifactId>
+            <version>1.43.3</version>
+        </dependency>
+
         <!-- REST Client -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -146,11 +167,19 @@
 
 
     <build>
+        <sourceDirectory>convergence/src/main/java</sourceDirectory>
+        <testSourceDirectory>convergence/src/test/java</testSourceDirectory>
+        <resources>
+            <resource>
+                <directory>convergence/src/main/resources</directory>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <mainClass>com.subham.convergence.ConvergenceApplication</mainClass>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
@@ -159,6 +188,22 @@
                     </excludes>
                 </configuration>
             </plugin>
+
+            <!--lombok-->
+            <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+                <annotationProcessorPaths>
+                    <path>
+                        <groupId>org.projectlombok</groupId>
+                        <artifactId>lombok</artifactId>
+                        <version>1.18.36</version>
+                    </path>
+                </annotationProcessorPaths>
+            </configuration>
+        </plugin>
+        
         </plugins>
     </build>
 

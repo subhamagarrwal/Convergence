@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 360px; padding: 18px; font-family: system-ui; background: #0f172a; color: #e2e8f0; }
+
+    h2   { font-size: 15px; font-weight: 700; }
+    .sub { font-size: 11px; color: #64748b; margin-bottom: 14px; }
+
+    input {
+      width: 100%; padding: 9px 10px; margin-bottom: 8px;
+      border: 1px solid #1e293b; border-radius: 6px;
+      background: #1e293b; color: #e2e8f0; font-size: 13px;
+    }
+
+    .row  { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+    .btn  { flex: 1; padding: 9px 6px; border: none; border-radius: 6px;
+            font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .blue { background: #3b82f6; color: #fff; }
+    .blue:hover { background: #2563eb; }
+    .red  { background: #dc2626; color: #fff; }
+    .red:hover  { background: #b91c1c; }
+    .gray { background: #1e293b; color: #94a3b8; }
+    .gray:hover { background: #334155; }
+    .green { background: #16a34a; color: #fff; }
+    .green:hover { background: #15803d; }
+    .full { width: 100%; margin-bottom: 8px; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .status { padding: 9px; border-radius: 6px; font-size: 12px;
+              margin-bottom: 10px; display: none; }
+    .ok  { background: #052e16; color: #4ade80; }
+    .err { background: #450a0a; color: #f87171; }
+    .inf { background: #0c1a2e; color: #60a5fa; }
+
+    .card { background: #1e293b; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+    .card-title { font-size: 11px; font-weight: 700; color: #94a3b8;
+                  text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .row2 { display: flex; justify-content: space-between; margin-bottom: 3px; }
+    .lbl  { font-size: 11px; color: #64748b; }
+    .val  { font-size: 11px; color: #e2e8f0; font-weight: 500; }
+    .badge { padding: 1px 6px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+    .active { background: #052e16; color: #4ade80; }
+    .warn   { background: #1c1003; color: #fbbf24; }
+    .off    { background: #1e293b; color: #64748b; }
+
+    .divider { height: 1px; background: #1e293b; margin: 10px 0; }
+
+    .hint { font-size: 10px; color: #475569; padding: 8px;
+            background: #0f172a; border-radius: 6px; line-height: 1.5; }
+    a { color: #60a5fa; }
+  </style>
+</head>
+<body>
+
+  <h2>🔖 Convergence</h2>
+  <p class="sub">Chrome + X + YouTube Bookmark Sync</p>
+
+  <!-- Credentials -->
+  <input id="userId"   type="text" placeholder="Convergence User ID (UUID)">
+  <input id="jwtToken" type="password" placeholder="JWT token (from /api/auth/login)">
+  <button class="btn blue full" id="saveBtn">Save & Start Syncing</button>
+
+  <div id="status" class="status"></div>
+
+  <!-- Sync buttons -->
+  <div class="row">
+    <button class="btn gray" id="chromeBtn">🌐 Chrome</button>
+    <button class="btn gray" id="xBtn">𝕏 Twitter</button>
+    <button class="btn gray" id="ytBtn">▶ YouTube</button>
+    <button class="btn blue" id="allBtn">⚡ All</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Chrome card -->
+  <div class="card" id="chromeCard" style="display:none">
+    <div class="card-title">🌐 Chrome Bookmarks</div>
+    <div class="row2"><span class="lbl">Last sync</span><span class="val" id="lastChrome">—</span></div>
+    <div class="row2"><span class="lbl">New</span><span class="val" id="chromeNew">—</span></div>
+    <div class="row2"><span class="lbl">Total</span><span class="val" id="chromeTotal">—</span></div>
+  </div>
+
+  <!-- X card -->
+  <div class="card" id="xCard" style="display:none">
+    <div class="card-title">𝕏 Twitter Bookmarks</div>
+    <div class="row2"><span class="lbl">QueryId</span><span class="val" id="xQueryId">—</span></div>
+    <div class="row2"><span class="lbl">Last sync</span><span class="val" id="lastX">—</span></div>
+    <div class="row2"><span class="lbl">New</span><span class="val" id="xNew">—</span></div>
+    <div class="row2"><span class="lbl">Total</span><span class="val" id="xTotal">—</span></div>
+    <div class="row2"><span class="lbl">Mode</span><span class="val" id="xMode">—</span></div>
+  </div>
+
+  <!-- YouTube card -->
+  <div class="card" id="ytCard" style="display:none">
+    <div class="card-title">▶ YouTube Watch Later</div>
+    <div class="row2"><span class="lbl">Logged in</span><span class="val" id="ytLoggedIn">—</span></div>
+    <div class="row2"><span class="lbl">Last sync</span><span class="val" id="lastYT">—</span></div>
+    <div class="row2"><span class="lbl">New</span><span class="val" id="ytNew">—</span></div>
+    <div class="row2"><span class="lbl">Total</span><span class="val" id="ytTotal">—</span></div>
+    <button class="btn green" id="ytLoginBtn" style="margin-top:6px;width:100%">
+      🔑 Log into YouTube
+    </button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="hint">
+    <b>Setup:</b><br>
+    • Chrome bookmarks sync automatically on any change<br>
+    • For 𝕏: log into <a href="https://x.com" target="_blank">x.com</a>,
+      visit <a href="https://x.com/i/bookmarks" target="_blank">bookmarks</a> once<br>
+    • For YouTube: click "Log into YouTube" above, then sync<br>
+    • All platforms sync every ~5 min automatically
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
