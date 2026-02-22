@@ -14,7 +14,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UnifiedSyncScheduler {
 
-    private final XDeadMansSwitchService xDeadManSwitch;
     private final YouTubeScraperService  ytScraper;
     private final YouTubeSessionRepository ytSessionRepo;
 
@@ -32,11 +31,11 @@ public class UnifiedSyncScheduler {
         log.info("[Scheduler] ═══ Running fallback sync checks ═══");
 
         // 1) X Dead Man's Switch (checks heartbeat internally)
-        try {
-            xDeadManSwitch.runFallbackCheck();
-        } catch (Exception e) {
-            log.error("[Scheduler] X fallback failed: {}", e.getMessage());
-        }
+        // try {
+        //     xDeadManSwitch.runFallbackCheck();
+        // } catch (Exception e) {
+        //     log.error("[Scheduler] X fallback failed: {}", e.getMessage());
+        // }
 
         // 2) YouTube — re-scrape for users with valid sessions
         try {
@@ -54,7 +53,6 @@ public class UnifiedSyncScheduler {
         for (YouTubeSession session : sessions) {
             if (!Boolean.TRUE.equals(session.getIsValid())) continue;
 
-            // Only run if last sync was > 2 hours ago
             if (session.getLastSyncAt() != null) {
                 long ageMins = java.time.Duration.between(
                         session.getLastSyncAt(),

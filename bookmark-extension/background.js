@@ -166,24 +166,28 @@ function flattenBookmarks(nodes, parentTitle, result = []) {
 // ═══════════════════════════════════════════════════════════════
 
 async function syncXBookmarks() {
-  const { userId, jwtToken, xAuth } = await chrome.storage.local.get([
-    "userId", "jwtToken", "xAuth"
-  ]);
-  if (!userId || !jwtToken) return;
+    const { userId, jwtToken, xAuth } = await chrome.storage.local.get([
+        "userId", "jwtToken", "xAuth"
+      ]);
+      if (!userId || !jwtToken) return;
 
-  await sendXHeartbeat(userId, jwtToken);
+      await sendXHeartbeat(userId, jwtToken);
 
-  if (!xAuth?.queryId) {
-    console.log("[X Sync] No queryId — visit x.com/i/bookmarks once");
-    return;
-  }
+      // If we haven't captured the GraphQL queryId, open bookmarks page to trigger network requests
+      if (!xAuth?.queryId) {
+        console.log("[X Sync] No queryId — opening x.com/i/bookmarks for user to login");
+        chrome.tabs.create({ url: "https://x.com/i/bookmarks", active: true });
+        return;
+      }
 
   try {
-    const ct0Cookie  = await chrome.cookies.get({ url: "https://x.com", name: "ct0" });
+       const ct0Cookie  = await chrome.cookies.get({ url: "https://x.com", name: "ct0" });
     const authCookie = await chrome.cookies.get({ url: "https://x.com", name: "auth_token" });
 
+    // If cookies missing, open X login so user can sign in and generate the cookies
     if (!ct0Cookie || !authCookie) {
-      console.log("[X Sync] Not logged into X");
+      console.log("[X Sync] Not logged into X — opening x.com/login");
+      chrome.tabs.create({ url: "https://x.com/login", active: true });
       return;
     }
 
@@ -213,19 +217,38 @@ async function syncXBookmarks() {
 
     if (!xRes.ok) {
       console.error("[X Sync] X API returned:", xRes.status);
+      // Try DOM fallback scrape if API fails
+      console.log("[X Sync] Attempting DOM scrape fallback");
+      await scrapeXBookmarksViaTab();
       return;
     }
 
     const rawXData = await xRes.json();
 
-    const syncRes = await fetch(`${BACKEND}/x/sync`, {
-      method: "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${jwtToken}`
-      },
-      body: JSON.stringify({ userId, rawXData })
-    });
+    // If we got a valid GraphQL JSON, try to post it to backend fallback endpoint
+    // The backend expects parsed tweet items; if it supports raw fallback, send rawXData
+    // Otherwise, attempt DOM scrape fallback below.
+    let syncRes = null;
+    try {
+      syncRes = await fetch(`${BACKEND}/x/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": `Bearer ${jwtToken}`
+        },
+        // send rawXData as `rawXData` so backend can detect fallback format
+        body: JSON.stringify({ userId, rawXData })
+      });
+    } catch (e) {
+      console.error('[X Sync] send to backend failed:', e?.message || e);
+    }
+
+    // If backend didn't accept the raw fallback, try DOM scrape
+    if (!syncRes || !syncRes.ok) {
+      console.log('[X Sync] Backend fallback failed, trying DOM scrape');
+      await scrapeXBookmarksViaTab();
+      return;
+    }
 
     if (syncRes.ok) {
       const data = await syncRes.json();
@@ -237,7 +260,135 @@ async function syncXBookmarks() {
     }
   } catch (e) {
     console.error("[X Sync] Error:", e.message);
+    // As a last resort, try DOM scrape fallback
+    try { await scrapeXBookmarksViaTab(); } catch (_) {}
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Fallback: Scrape X bookmarks via an injected tab DOM script
+// If the GraphQL API or queryId approach fails, open the bookmarks page
+// in a non-active tab and extract tweet data from the DOM, then send
+// a parsed XSyncPayload to the backend `/x/sync` endpoint.
+// ═══════════════════════════════════════════════════════════════
+
+async function scrapeXBookmarksViaTab() {
+  const { userId, jwtToken } = await chrome.storage.local.get(["userId", "jwtToken"]);
+  if (!userId || !jwtToken) return;
+
+  try {
+    const tab = await chrome.tabs.create({ url: "https://x.com/i/bookmarks", active: false });
+
+    // Wait for page to load
+    await new Promise(resolve => {
+      chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+        if (tabId === tab.id && info.status === "complete") {
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }
+      });
+    });
+
+    // Wait a bit for dynamic content to render
+    await new Promise(r => setTimeout(r, 2500));
+
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: scrapeXDOM
+    });
+
+    // Close the tab
+    try { chrome.tabs.remove(tab.id); } catch (_) {}
+
+    const tweets = results?.[0]?.result || [];
+    console.log(`[X Tab] Scraped ${tweets.length} tweets`);
+    if (tweets.length === 0) return;
+
+    // Transform into XSyncPayload format
+    const payload = { userId, bookmarks: tweets };
+
+    const res = await fetch(`${BACKEND}/x/sync`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${jwtToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      console.log('[X Tab Sync]', data.data?.message || data.message || 'synced');
+      await chrome.storage.local.set({ lastXSync: new Date().toISOString(), lastXSyncResult: data.data || data });
+    } else {
+      console.error('[X Tab Sync] Backend returned', res.status);
+    }
+  } catch (e) {
+    console.error('[X Tab] Error:', e.message);
+  }
+}
+
+// This function runs inside x.com bookmarks page and extracts basic tweet info.
+function scrapeXDOM() {
+  const tweets = [];
+
+  // container for bookmarks — X markup changes often; try multiple selectors
+  const items = document.querySelectorAll('article, div[role="article"], div[data-testid="tweet"]');
+
+  items.forEach(item => {
+    try {
+      // tweet id from data attributes or link href
+      let tweetUrl = null;
+      const link = item.querySelector('a[href*="/status/"]');
+      if (link) tweetUrl = link.href;
+      if (!tweetUrl) {
+        const anchors = item.querySelectorAll('a');
+        for (const a of anchors) {
+          if (a.href && a.href.includes('/status/')) { tweetUrl = a.href; break; }
+        }
+      }
+      if (!tweetUrl) return;
+
+      const tweetIdMatch = tweetUrl.match(/status\/(\d+)/);
+      const tweetId = tweetIdMatch ? tweetIdMatch[1] : null;
+
+      const authorLink = item.querySelector('a[href^="/"][role="link"]') || item.querySelector('div[dir] a[href^="/"]');
+      const authorUsername = authorLink ? authorLink.getAttribute('href').replace('/', '') : '';
+
+      const displayNameEl = item.querySelector('div[dir] > span') || item.querySelector('strong');
+      const authorDisplayName = displayNameEl ? displayNameEl.textContent.trim() : '';
+
+      const contentEl = item.querySelector('div[lang]') || item.querySelector('p');
+      const content = contentEl ? contentEl.textContent.trim() : '';
+
+      const img = item.querySelector('img')?.src || null;
+
+      // counts — may not be available reliably
+      const counts = { likeCount: null, retweetCount: null, replyCount: null };
+      const statEls = item.querySelectorAll('div[role="group"] a');
+      if (statEls && statEls.length >= 3) {
+        const parseNum = t => { const n = t?.textContent?.trim().replace(/[,\s]/g,'')||''; return n ? Number(n) : null; };
+        counts.replyCount = parseNum(statEls[0]);
+        counts.retweetCount = parseNum(statEls[1]);
+        counts.likeCount = parseNum(statEls[2]);
+      }
+
+      tweets.push({
+        tweetId: tweetId || '',
+        tweetUrl,
+        authorUsername: authorUsername || '',
+        authorDisplayName: authorDisplayName || '',
+        authorProfileImage: img || '',
+        content: content || '',
+        mediaUrls: null,
+        likeCount: counts.likeCount,
+        retweetCount: counts.retweetCount,
+        replyCount: counts.replyCount
+      });
+    } catch (_) {}
+  });
+
+  return tweets;
 }
 
 async function sendXHeartbeat(userId, jwtToken) {
