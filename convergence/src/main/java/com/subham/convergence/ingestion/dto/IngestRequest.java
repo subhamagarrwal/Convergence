@@ -1,17 +1,23 @@
-package com.subham.convergence.ingestion.dto;
+package com.subham.convergence.dto.request;
 
 import com.subham.convergence.enums.PlatformType;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-// Generic ingestion request — used by Reddit, YouTube, Medium etc.
+import java.util.Map;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+
 public class IngestRequest {
-    private String userId;
+    private String url;
+    private String title;
     private PlatformType platform;
-    private String rawData;
+    private String description;
+    private String externalId;
+    private String thumbnailUrl;
+    private Map<String, Object> metadata;
+
 }
