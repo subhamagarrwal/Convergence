@@ -11,9 +11,6 @@ import com.subham.convergence.model.Bookmark;
 
 @Repository
 public interface BookmarkRepository extends JpaRepository<Bookmark, UUID> {
-    List<Bookmark> findByUserId(UUID userId);
-    List<Bookmark> findByUserIdAndPlatform(UUID userId, PlatformType platform);
-    boolean existsByUrlAndUserId(String url, UUID userId);
-    long countByUserId(UUID userId);
-    long countByUserIdAndPlatform(UUID userId, PlatformType platform);
+    boolean existsByUrl(String url);
+    long countByPlatform(PlatformType platform);
 }
