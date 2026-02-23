@@ -2,35 +2,18 @@ package com.subham.convergence.model;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
-
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
+import com.fasterxml.jackson.databind.JsonNode;
 import com.subham.convergence.enums.ContentType;
 import com.subham.convergence.enums.PlatformType;
-
-import jakarta.persistance.*;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.InheritanceType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 @Entity
 @Table(name = "bookmarks")
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "platform_type", discriminatorType = DiscriminatorType.STRING)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -39,10 +22,6 @@ public class Bookmark {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "platform", nullable = false)
@@ -66,6 +45,10 @@ public class Bookmark {
     @Enumerated(EnumType.STRING)
     @Column(name = "content_type")
     private ContentType contentType;
+
+    // Platform-specific metadata (YouTube: duration/views, X: likes/retweets, Reddit: upvotes/subreddit)
+    @Column(name = "platform_metadata", columnDefinition = "jsonb")
+    private JsonNode platformMetadata;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

@@ -1,1 +1,0 @@
-//storing the last ingestion timestamp for each platform
