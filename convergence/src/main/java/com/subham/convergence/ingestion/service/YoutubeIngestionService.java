@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+//needs scheduling and login persistence (cookies/sessionStorage/localStorage)
 @Slf4j
 @Service
 @RequiredArgsConstructor
