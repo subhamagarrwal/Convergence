@@ -1,4 +1,4 @@
-package com.subham.convergence.dto.request;
+package com.subham.convergence.ingestion.dto;
 
 import com.subham.convergence.enums.PlatformType;
 import lombok.AllArgsConstructor;
